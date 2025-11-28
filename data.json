@@ -30,12 +30,14 @@
       {
         "id": "13a",
         "marks": 3,
-        "text": "According to Source M, what actions did the non-white population in South Africa take to resist apartheid in the 1950s?"
+        "text": "According to Source M, what actions did the non-white population in South Africa take to resist apartheid in the 1950s?",
+        "modelAnswer": "• A country-wide passive resistance campaign was launched in 1952 to defy the apartheid system. \n • Non-whites used whites-only entrances at railway stations. \n • Non-whites entered restricted areas without passes. \n • Non-whites defied curfew regulations and other apartheid laws."
       },
       {
         "id": "13b",
         "marks": 2,
-        "text": "What does Source N suggest about resistance to apartheid policies?"
+        "text": "What does Source N suggest about resistance to apartheid policies?",
+        "modelAnswer": "• Protesters used train carriages reserved for white or European people only. \n • Protestors were hopeful and positive. \n • Many people took part in resistance actions."
       },
       {
         "id": "14",

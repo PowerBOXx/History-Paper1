@@ -92,7 +92,7 @@
         .model-answer p { margin: 5px 0; font-size: 0.95rem; line-height: 1.5; color: #34495e; white-space: pre-wrap; }
         .hidden { display: none; }
 
-        /* Loading Overlay */
+        /* Loading Overlay - Now just a loading message */
         #loading-overlay { 
             position: absolute; top:0; left:0; right:0; bottom:0; background: rgba(255,255,255,0.9); 
             display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 2000;
@@ -102,9 +102,8 @@
 <body>
 
 <div id="loading-overlay">
-    <h2>Welcome to IB History Paper 1 Practice</h2>
-    <p>To begin, please load the data file (<code>data.json</code>).</p>
-    <input type="file" id="init-file-input" accept=".json" style="margin: 20px;">
+    <h2>Loading Exam Data...</h2>
+    <p>Attempting to load data.json from the same directory.</p>
 </div>
 
 <div id="sidebar">
@@ -122,7 +121,7 @@
 <div id="main">
     <div id="header">
         <div id="exam-info">
-            <h1 id="exam-title">Select an Exam</h1>
+            <h1 id="exam-title">Loading...</h1>
             <p id="exam-theme">...</p>
         </div>
         <div id="timer" style="color:#e74c3c; font-weight:bold;"></div>
@@ -147,6 +146,7 @@
 
     // --- Answer Saving/Loading Utility ---
     const STORAGE_KEY = 'ib_history_answers';
+    const overlay = document.getElementById('loading-overlay');
 
     function loadLocalAnswers() {
         const localSaved = localStorage.getItem(STORAGE_KEY);
@@ -170,52 +170,38 @@
         updateWordCount(key);
     }
 
-    // --- File Loading Logic ---
-    const initInput = document.getElementById('init-file-input');
-    const overlay = document.getElementById('loading-overlay');
-    
-    // 监听初始文件加载
-    initInput.addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            try {
-                examData = JSON.parse(e.target.result);
-                // 检查JSON结构是否包含questions
-                if (examData.length > 0 && examData[0].questions) {
-                    overlay.style.display = 'none';
-                    loadLocalAnswers(); // 加载本地已保存答案
-                    initUI();
-                } else {
-                    alert("JSON structure is incorrect. Missing 'questions' array.");
-                }
-            } catch (err) {
-                alert("Error parsing JSON file. Please ensure it is a valid JSON file.");
+    // --- Data Loading Logic (AUTOMATIC) ---
+    async function loadDataAndInitUI() {
+        try {
+            // Attempt to fetch data.json from the same directory
+            const response = await fetch('data.json'); 
+            if (!response.ok) {
+                throw new Error('Network response was not ok, or data.json file not found.');
             }
-        };
-        reader.readAsText(file);
-    });
+            examData = await response.json();
 
-    // --- UI Initialization ---
-    function initUI() {
-        const list = document.getElementById('exam-list');
-        list.innerHTML = '';
-        examData.forEach((exam, idx) => {
-            const btn = document.createElement('button');
-            btn.className = 'exam-btn';
-            btn.innerText = exam.title;
-            btn.onclick = () => loadExam(idx);
-            list.appendChild(btn);
-        });
-
-        loadExam(0); // 默认加载第一个考试
+            // Structure check
+            if (examData.length > 0 && examData[0].questions) {
+                overlay.style.display = 'none';
+                loadLocalAnswers(); // 加载本地已保存答案
+                initUI();
+            } else {
+                overlay.innerHTML = '<h2>Data Load Error</h2><p>JSON structure is incorrect. Missing "questions" array in the data.</p>';
+            }
+        } catch (err) {
+            console.error(err);
+            overlay.innerHTML = `<h2>Data Load Error</h2><p>Could not load <code>data.json</code> automatically. Please ensure the file is in the same folder as <code>index.html</code>. Error: ${err.message}</p>`;
+        }
     }
+
+    // Call the automatic loading function when the script runs
+    window.onload = loadDataAndInitUI;
 
     // --- Auto Textarea Height & Word Count Logic ---
     function autoGrow(element) {
         element.style.height = "auto";
-        element.style.height = (element.scrollHeight) + "px";
+        // Calculate and set the new height, adding a small buffer
+        element.style.height = (element.scrollHeight) + "px"; 
     }
 
     function getWordCount(text) {
@@ -230,6 +216,26 @@
         if (!textarea) return;
         const count = getWordCount(textarea.value);
         document.getElementById(`word-count-${key}`).innerText = `${count} words`;
+    }
+
+    // --- UI Initialization ---
+    function initUI() {
+        const list = document.getElementById('exam-list');
+        list.innerHTML = '';
+        examData.forEach((exam, idx) => {
+            const btn = document.createElement('button');
+            btn.className = 'exam-btn';
+            btn.innerText = exam.title;
+            btn.onclick = () => loadExam(idx);
+            list.appendChild(btn);
+        });
+
+        if (examData.length > 0) {
+            loadExam(0); // 默认加载第一个考试
+        } else {
+            document.getElementById('exam-title').innerText = 'No Exams Found';
+            document.getElementById('exam-theme').innerText = 'Please check your data.json file.';
+        }
     }
 
     // --- Load Exam Content ---
@@ -256,7 +262,9 @@
             if(src.type === 'text') {
                 html += `<div class="source-text" id="src-${exam.id}-${src.id}">${src.content}</div>`;
             } else if (src.type === 'image') {
-                html += `<img src="${src.src}" class="source-img" onerror="this.style.display='none';this.insertAdjacentHTML('afterend', '<p style=color:red>Image not found or path incorrect: ${src.src}</p>')">`;
+                // Simplified image path handling for placeholder sources
+                const imgSrc = src.src || 'placeholder-image.png'; 
+                html += `<img src="${imgSrc}" class="source-img" onerror="this.style.display='none';this.insertAdjacentHTML('afterend', '<p style=color:red>Image not found or path incorrect: ${imgSrc}</p>')">`;
                 if(src.caption) html += `<div class="img-caption">Caption: ${src.caption}</div>`;
             }
             div.innerHTML = html;
@@ -273,7 +281,7 @@
             const key = `${exam.id}-${q.id}`;
             const val = savedAnswers[key] || "";
             
-            // Placeholder for model answer. We check if 'modelAnswer' exists in the JSON data.
+            // Model answer content is now pulled directly from the 'modelAnswer' field in the loaded JSON
             const modelAnswerText = q.modelAnswer || "Official answer will be loaded here when available.";
 
             card.innerHTML = `
@@ -293,12 +301,12 @@
 
                 <div>
                     <button class="btn-link" onclick="toggleModelAnswer(this, '${key}')">
-                        View Markscheme
+                        View Model Answer / Markscheme
                     </button>
                 </div>
                 
                 <div class="model-answer hidden" id="model-answer-${key}">
-                    <h4>Markscheme:</h4>
+                    <h4>Official Answer / Guidance:</h4>
                     <p>${modelAnswerText}</p>
                 </div>
             `;
@@ -342,7 +350,9 @@
                 // 使用...展开运算符合并新旧答案，保留本地未被导入文件覆盖的答案
                 savedAnswers = { ...savedAnswers, ...loaded }; 
                 saveLocalAnswers();
-                loadExam(currentExamIndex); // Refresh UI to show loaded answers
+                if (currentExamIndex !== -1) {
+                    loadExam(currentExamIndex); // Refresh UI to show loaded answers
+                }
                 alert("Answers loaded successfully! Your current exam view has been updated.");
             } catch(err) {
                 alert("Invalid answer file. Please ensure it is a valid JSON file.");
